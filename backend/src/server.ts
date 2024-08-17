@@ -1,5 +1,8 @@
+// Node modules
 import express from "express";
-import 'dotenv/config'
+import "dotenv/config";
+
+// Configurations
 import connectDb from "./config/db";
 
 const app = express();

@@ -1,12 +1,23 @@
-import { model, Schema } from "mongoose";
+import { model, Schema, Document } from "mongoose";
 
-const profileSchema = new Schema({
-  gender: { type: String, trim: true },
-  dateOfBirth: { type: String, trim: true },
-  about: { type: String, trim: true },
-  contactNumber: { type: Number, trim: true },
+// Define the Profile interface
+interface IProfile extends Document {
+  user: Schema.Types.ObjectId;
+  gender: "Male" | "Female" | "Other";
+  dateOfBirth: string;
+  about: string;
+  contactNumber: string;
+}
+
+// Define the Profile schema
+const profileSchema = new Schema<IProfile>({
+  user: { type: Schema.Types.ObjectId, ref: "User" },
+  gender: { type: String, enum: ["Male", "Female", "Other"], trim: true, default: "Other" },
+  dateOfBirth: { type: String, trim: true, default: "" },
+  about: { type: String, trim: true, default: "" },
+  contactNumber: { type: String, trim: true },
 });
 
-const Profile = model("Profile", profileSchema);
+const Profile = model<IProfile>("Profile", profileSchema);
 
 export default Profile;

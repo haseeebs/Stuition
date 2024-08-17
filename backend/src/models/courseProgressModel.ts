@@ -1,10 +1,19 @@
-import { model, Schema } from "mongoose";
+import { model, Schema, Document } from "mongoose";
 
-const courseProgressSchema = new Schema({
-  courseId: { type: Schema.Types.ObjectId, ref: "Course" },
-  completedVideos: [{ type: Schema.Types.ObjectId, ref: "SubSection" }],
+// Define the CourseProgress interface
+interface ICourseProgress extends Document {
+  courseId: Schema.Types.ObjectId;
+  userId: Schema.Types.ObjectId;
+  completedVideos: Schema.Types.ObjectId[];
+}
+
+// Define the CourseProgress schema
+const courseProgressSchema = new Schema<ICourseProgress>({
+  courseId: { type: Schema.Types.ObjectId, ref: "Course", required: true },
+  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  completedVideos: [{ type: Schema.Types.ObjectId, ref: "SubSection", required: true }],
 });
 
-const courseProgress = model("CourseProgress", courseProgressSchema);
+const CourseProgress = model<ICourseProgress>("CourseProgress", courseProgressSchema);
 
-export default courseProgress;
+export default CourseProgress;
