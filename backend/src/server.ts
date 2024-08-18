@@ -10,6 +10,8 @@ import connectDb from "./config/db";
 // Models
 import Profile from "models/profileModel";
 import User from "models/userModels";
+import Course from "models/courseModel";
+import CourseProgress from "models/courseProgressModel";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -114,6 +116,59 @@ app.post('api/v1/auth/logout', async (req, res) => {
         message: 'Logged out successfully'
     })
 })
+
+app.post('api/v1/auth/change-password', async (req, res, next) => {
+
+    // Validate the request body
+    const { oldPassword, newPassword } = req.body;
+
+    const userId = req.user.id;
+
+    let user = await User.findById(userId);
+
+    // Assign the new password (this will trigger the 'pre-save' middleware)
+    user.password = newPassword;
+
+    const updatedUser = await user.save();
+
+    res.status(200).json({
+        success: true,
+        message: 'Password updated successfully',
+        data: {
+            _id: updatedUser._id,
+            email: updatedUser.email,
+            accountType: updatedUser.accountType
+        }
+    })
+})
+
+app.post('api/v1/auth/change-password', async (req, res, next) => {
+
+    const userId = req.user.id;
+
+    const user = await User.findById(userId);
+
+    await Profile.findOneAndDelete({ user: userId });
+
+    // Delete all courses where the user is enrolled
+    if (user.courses.length > 0) {
+        await Course.updateMany(
+            { studentsEnrolled: userId },
+            { $pull: { studentsEnrolled: userId } }
+        );
+    }
+
+    // Remove user course progress entries
+    await CourseProgress.deleteMany({ userId: userId });
+
+    // Delete the user
+    await user.deleteOne();
+
+    return res.status(200).json({
+        success: true,
+        message: "User and related data deleted successfully"
+    });
+});
 
 app.listen(PORT, () => {
     console.log(`Running on Port http://localhost:${PORT}`);
