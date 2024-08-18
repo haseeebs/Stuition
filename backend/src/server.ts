@@ -68,40 +68,52 @@ app.get('/api/v1/auth/register', async (req, res, next) => {
 });
 
 app.get('/api/v1/auth/login', async (req, res, next) => {
-  
+
     const { email, password } = req.body;
-  
+
     const user = await User.findOne({ email });
-  
+
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User does not found."
-    });
+        return res.status(404).json({
+            success: false,
+            message: "User does not found."
+        });
     }
-  
+
     if (!process.env.JWT_SECRET_KEY) throw new Error('JWT_SECRET_KEY is not defined in the environment variables')
-  
+
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: '30d' });
-  
+
     res.cookie('jwtToken', token, {
-      httpOnly: true,
-      sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 Days
+        httpOnly: true,
+        sameSite: 'strict',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 Days
     })
-  
+
     return res.status(200).json({
-      success: true,
-      message: "Login successfully",
-      data: {
-        _id: user._id,
-        email: user.email,
-        accountType: user.accountType
-      },
+        success: true,
+        message: "Login successfully",
+        data: {
+            _id: user._id,
+            email: user.email,
+            accountType: user.accountType
+        },
     });
-  
-  })
+
+})
+
+app.post('api/v1/auth/logout', async (req, res) => {
+    res.cookie('jwtToken', '', {
+        httpOnly: true,
+        expires: new Date(0)
+    })
+
+    return res.status(200).json({
+        success: true,
+        message: 'Logged out successfully'
+    })
+})
 
 app.listen(PORT, () => {
     console.log(`Running on Port http://localhost:${PORT}`);
