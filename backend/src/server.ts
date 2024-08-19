@@ -7,6 +7,7 @@ import connectDb from "./config/db";
 
 // Route handlers
 import userRoutes from './routes/userRoutes';
+import profileRoutes from './routes/profileRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -19,6 +20,7 @@ app.get('/', async (req, res) => {
 });
 
 app.use('/api/v1/auth', userRoutes);
+app.use('/api/v1/profile', profileRoutes);
 
 app.listen(PORT, () => {
     console.log(`Running on Port http://localhost:${PORT}`);
