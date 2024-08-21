@@ -9,6 +9,7 @@ import connectDb from "./config/db";
 import userRoutes from './routes/userRoutes';
 import profileRoutes from './routes/profileRoutes';
 import courseRoutes from './routes/courseRoutes';
+import paymentRoutes from './routes/paymentRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,6 +24,7 @@ app.get('/', async (req, res) => {
 app.use('/api/v1/auth', userRoutes);
 app.use('/api/v1/profile', profileRoutes);
 app.use('/api/v1/courses', courseRoutes);
+app.use('/api/v1/payment', paymentRoutes);
 
 app.listen(PORT, () => {
     console.log(`Running on Port http://localhost:${PORT}`);
