@@ -5,6 +5,7 @@ import { Router } from "express";
 import { createCourse, deleteCourse, getCourse, updateCourse } from "controllers/courseController";
 import upload from "controllers/uploadController";
 import { createSection, deleteSection, updateSection } from "controllers/sectionController";
+import { createSubSection, updateSubSection, deleteSubSection } from "controllers/subSectionController";
 
 const router = Router();
 
@@ -29,5 +30,14 @@ router.put("/:courseId/sections/:sectionId", updateSection);
 
 // Delete an existing section under a specific course
 router.delete("/:courseId/sections/:sectionId", deleteSection);
+
+// Create a new subsection under a specific section
+router.post("/:courseId/sections/:sectionId/subsections", upload.single('video'), createSubSection);
+
+// Update an existing subsection under a specific section
+router.patch("/subsections/:subsectionId", upload.single('video'), updateSubSection);
+
+// Delete an existing subsection under a specific section
+router.delete("/sections/:sectionId/subsections/:subsectionId", deleteSubSection);
 
 export default router;
