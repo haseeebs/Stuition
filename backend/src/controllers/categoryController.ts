@@ -44,4 +44,3 @@ const categoryPageDetails =
   }
 
 export { categoryPageDetails, createCategory };
-
