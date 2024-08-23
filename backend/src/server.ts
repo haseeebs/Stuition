@@ -1,7 +1,13 @@
 // Node modules
+import "dotenv/config";
 import express from "express";
 import cookieParser from 'cookie-parser'
-import "dotenv/config";
+
+// Middleware
+import errorHandlerMiddleware from "middleware/errorHandlerMiddleware";
+
+// Utilities
+import ExpressError from "utils/ExpressError";
 
 // Configurations
 import connectDb from "./config/db";
@@ -18,7 +24,6 @@ const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
 app.use(cookieParser());
-// IMPORTANT Add cors
 
 // Connect to the database
 connectDb();
@@ -36,22 +41,11 @@ app.use('/api/v1/categories', categoryRoutes);
 
 // Catch-all route for undefined routes
 app.all("*", (req, res, next) => {
-    const error = new Error("Page Not Found");
-    error.statusCode = 404;
-    next(error);
-  });
+  next(new ExpressError(404, "Page Not Found"));
+});
 
 // Error Handling Middleware
-app.use((err, req, res, next) => {
-    const { statusCode = 500, message = "Something went wrong..." } = err;
-    console.log(`Error message: ${err.message}`);
-    
-    res.status(statusCode).json({
-        success: false,
-        message: message,
-        statusCode,
-      });
-});
+app.use(errorHandlerMiddleware);
 
 // Start the server
 app.listen(PORT, () => {
