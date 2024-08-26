@@ -1,13 +1,27 @@
+// Node modules
+import { NextFunction, Request, Response } from "express";
+
 // Internal models
 import Category from "models/categoryModel";
 import Course from "models/courseModel";
 
-const createCategory =
-  async ( req, res, next ) => {
+// Schemas
+import { categorySchema, CategorySchemaType } from "schemas/categorySchema";
+
+// Utilities
+import ExpressError from "utils/ExpressError";
+import wrapAsync from "utils/wrapAsync";
+
+const createCategory = wrapAsync(
+  async ( req: Request<{}, {}, CategorySchemaType>, res: Response, next: NextFunction ) => {
     
-    const { name, description } = req.body;
+    const { name, description } = categorySchema.parse(req.body);
 
     const existingCategory = await Category.findOne({ name });
+
+    if (existingCategory) {
+      return next(new ExpressError(400, "Category already exists"));
+    }
 
     const newCategory = await Category.create({ name, description });
 
@@ -17,10 +31,14 @@ const createCategory =
       newCategory,
     });
   }
+);
 
-const categoryPageDetails =
-  async (req, res, next) => {
+const categoryPageDetails = wrapAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.user?._id;
+    if (!userId) {
+      return next(new ExpressError(400, "User ID is required"));
+    }
 
     // Fetch popular courses (sorted by number of students enrolled)
     const popularCourses = await Course.find({})
@@ -42,5 +60,6 @@ const categoryPageDetails =
       },
     });
   }
+);
 
 export { categoryPageDetails, createCategory };
