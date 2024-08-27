@@ -1,6 +1,8 @@
+// Node modules
+import { NextFunction, Request, Response } from "express";
+
 // Configurations
 import cloudinary from "config/cloudinaryConfig";
-import { NextFunction } from "express";
 
 // Internal models
 import Course from "models/courseModel";
@@ -9,174 +11,261 @@ import Section from "models/sectionModel";
 import SubSection from "models/subSectionModel";
 import User from "models/userModels";
 
-const getCourse =
-    async (req, res, next) => {
-      const { courseId } = req.params;
-  
-      // We can also populate related fields like instructor and sections
-      const course = await Course.findById(courseId)
-        .populate({
-          path: "instructor",
-          select: "image firstName email",
-          populate: {
-            path: "profile",
-            select: "about contactNumber"
-          }
-        })
-        .populate("category")
-        .populate({
-          path: "sections",
-          select: "sectionName",
-          populate: {
-            path: "subSection",
-            select: "title timeDuration description"
-          }
-        })
-        .populate({
-          path: "ratingAndReviews",
-          populate: {
-            "path": "user",
-            "select": "firstName"
-          }
-        })
-        .populate({
-          path: 'studentsEnrolled',
-          select: 'name',
-          populate: {
-            path: 'profile',
-            select: 'about contactNumber'
-          }
-        }).exec();
-  
-      return res.status(200).json({
-        success: true,
-        message: "Course fetched successfully",
-        data: course,
-      });
-    }
+// Schemas
+import { courseSchema, CourseType } from "schemas/courseSchema";
 
-const createCourse =
-    async (req, res, next) => {
-
-        // Validate request body using Zod schema
-        const validatedData = req.body;
-
-        const { courseName, courseDescription, price, category, tags, whatYouWillLearn } = validatedData;
-
-        const thumbnail = req.file?.path;
-
-        // Upload thumbnail to Cloudinary
-        const result = await cloudinary.uploader.upload(thumbnail, {
-            folder: "course_thumbnails",
-            resource_type: "image",
-            public_id: `${courseName}-${Date.now()}`,
-            overwrite: true
-        });
-
-        // Create a new course
-        const newCourse = await Course.create({
-            courseName,
-            courseDescription,
-            instructor: req.user?._id,
-            whatYouWillLearn,
-            price,
-            thumbnail: result.secure_url,
-            category,
-            tags
-        });
-
-        // Send response
-        res.status(200).json({
-            success: true,
-            message: "Course created successfully...",
-            courseId: newCourse._id
-        });
-    };
+// Utilities
+import ExpressError from "utils/ExpressError";
+import wrapAsync from "utils/wrapAsync";
+import UserActivity from "models/userActivity";
 
 
-const updateCourse =
-    async (req, res, next) => {
+// Get course by ID
+const getCourse = wrapAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { courseId } = req.params;
+    const userId = req.user?._id;
 
-        const { courseName, courseDescription, price, category, tags, whatYouWillLearn } = req.body;
-        const { courseId } = req.params;
-
-        const course = await Course.findById(courseId);
-
-        let thumbnail;
-
-        if (req.file) {
-            try {
-                const result = await cloudinary.uploader.upload(req.file.path, {
-                    folder: "course_thumbnails",
-                    resource_type: "image",
-                    public_id: `${courseName}-${Date.now()}`,
-                    overwrite: true
-                });
-
-                thumbnail = result.secure_url;
-            } catch (error) {
-                return next(new ExpressError(500, "Failed to upload image"));
-            }
+    // We can also populate related fields like instructor and sections
+    const course = await Course.findById(courseId)
+      .populate({
+        path: "instructor",
+        select: "image firstName email",
+        populate: {
+          path: "profile",
+          select: "about contactNumber"
         }
+      })
+      .populate("category")
+      .populate({
+        path: "sections",
+        select: "sectionName",
+        populate: {
+          path: "subSection",
+          select: "title timeDuration description"
+        }
+      })
+      .populate({
+        path: "ratingAndReviews",
+        populate: {
+          "path": "user",
+          "select": "firstName"
+        }
+      })
+      .populate({
+        path: 'studentsEnrolled',
+        select: 'name',
+        populate: {
+          path: 'profile',
+          select: 'about contactNumber'
+        }
+      }).exec();
 
-        // Update course document
-        const updatedCourse = await Course.findByIdAndUpdate(
-            courseId,
-            {
-                $set: {
-                    courseName,
-                    courseDescription,
-                    whatYouWillLearn,
-                    price,
-                    ...(thumbnail && { thumbnail }), // Only update thumbnail if provided
-                    category,
-                    tags
-                }
-            },
-            { new: true, runValidators: true } // Ensure updated data is validated
-        );
-
-        return res.status(200).json({
-            success: true,
-            message: "Course updated successfully",
-            data: updatedCourse,
-        });
+    if (!course) {
+      return next(new ExpressError(404, "Course not found."));
     }
 
-const deleteCourse =
-    async (req, res, next) => {
-        const { courseId } = req.params;
+    await UserActivity.findOneAndUpdate(
+        { userId },
+        { $push: { viewedCourses: { courseId, viewedAt: Date.now() } } },
+        { new: true, upsert: true }
+    );
 
-        // Find the course by ID
-        const course = await Course.findById(courseId);
+    return res.status(200).json({
+      success: true,
+      message: "Course fetched successfully",
+      data: course,
+    });
+  }
+);
 
-        const sections = await Section.find({ _id: { $in: course.sections } });
+const getAllCourses = wrapAsync(async (req: Request, res: Response) => {
+  const courses = await Course.find()
+    .populate({
+      path: "instructor",
+      select: "firstName email accountType",
+      populate: {
+        path: "profile",
+        select: "user"
+      }
+    })
+    .populate("category")
+    .populate({
+      path: "sections",
+      select: "sectionName",
+      populate: {
+        path: "subSection",
+        select: "title timeDuration description"
+      }
+    })
+    .populate("ratingAndReviews")
+    .exec();
 
-        // Collect all subsection IDs in one array
-        const allSubsectionIds = sections.flatMap(section => section.subSections);
+  res.status(200).json({
+    success: true,
+    data: courses,
+  });
+});
 
-        // Delete related subsesction
-        await SubSection.deleteMany({ _id: { $in: allSubsectionIds } })
+// Create a new course
+// Route: POST /api/courses
+// Access: Private (Only instructors can create courses)
+const createCourse = wrapAsync(
+  async (req: Request<{}, {}, CourseType>, res: Response, next: NextFunction) => {
 
-        // Delete related sections
-        await Section.deleteMany({ _id: { $in: course.sections } })
+    // Validate request body using Zod schema
+    const validatedData = courseSchema.parse(req.body);
 
-        // Delete related ratings and reviews
-        await RatingAndReview.deleteMany({ _id: { $in: course.ratingAndReviews } });
-
-        // Remove course from students' enrolled courses
-        await User.updateMany(
-            { _id: { $in: course.studentsEnrolled } },
-            { $pull: { courses: course._id } }
-        );
-
-        // Delete the course
-        await Course.findByIdAndDelete(courseId);
-
-        res.status(200).json({
-            success: true,
-            message: "Course and it's related data deleted successfully.",
-        });
+    const { courseName, courseDescription, price, category, tags, whatYouWillLearn } = validatedData;
+    
+    // Check if file is present
+    if (!req.file) {
+      return next(new ExpressError(400, "Thumbnail is required..."));
     }
 
-export { getCourse, createCourse, updateCourse, deleteCourse };
+    const thumbnail = req.file?.path;
+
+    // Upload thumbnail to Cloudinary
+    const result = await cloudinary.uploader.upload( thumbnail, {
+      folder:  "course_thumbnails",
+      resource_type: "image",
+      public_id: `${courseName}-${Date.now()}`,
+      overwrite: true
+    });
+    
+    // Create a new course
+    const newCourse = await Course.create({
+      courseName,
+      courseDescription,
+      instructor: req.user?._id,
+      whatYouWillLearn,
+      price,
+      thumbnail: result.secure_url,
+      category,
+      tags
+    });
+
+    // Send response
+    res.status(200).json({
+      success: true,
+      message: "Course created successfully...",
+      courseId: newCourse._id
+    });
+  }
+);
+
+const updateCourse = wrapAsync( 
+  async (req: Request<{ courseId: string },{},CourseType>, res: Response, next: NextFunction) => {
+
+    const validatedData = courseSchema.partial().parse(req.body);
+
+    const { courseName, courseDescription, price, category, tags, whatYouWillLearn } = validatedData;
+    const { courseId } = req.params;
+
+    const course = await Course.findById(courseId);
+
+    if(!course) {
+      return next(new ExpressError(404, "Course not found."))
+    }
+
+    let thumbnail;
+
+    if(req.file) {
+      try {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder:  "course_thumbnails",
+          resource_type: "image",
+          public_id: `${courseName}-${Date.now()}`,
+          overwrite: true
+        });
+
+        thumbnail = result.secure_url;
+      } catch (error) {
+        return next(new ExpressError(500, "Failed to upload image"));
+      }
+    }
+    
+    // Update course document
+    const updatedCourse = await Course.findByIdAndUpdate(
+      courseId,
+      {
+        $set: {
+          courseName,
+          courseDescription,
+          whatYouWillLearn,
+          price,
+          ...(thumbnail && { thumbnail }), // Only update thumbnail if provided
+          category,
+          tags
+        }
+      },
+      { new: true, runValidators: true } // Ensure updated data is validated
+    );
+
+    if(!updatedCourse) {
+      return next(new ExpressError(404, "Failed to update course"))
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Course updated successfully",
+      data: updatedCourse,
+    });
+  }
+);
+
+// Delete a course
+// Route: DELETE /api/courses/:id
+// Access: Private (Only instructors can delete courses)
+const deleteCourse = wrapAsync(
+  async (req: Request<{ courseId: string }>, res: Response, next: NextFunction) => {
+    const { courseId } = req.params;
+
+    // Find the course by ID
+    const course = await Course.findById(courseId);
+
+    // Check if the course exists
+    if (!course) {
+      return next(new ExpressError(404, "Course not found"));
+    }
+
+    const sections = await Section.find({ _id: { $in: course.sections } });
+    
+    // Collect all subsection IDs in one array
+    const allSubsectionIds = sections.flatMap(section => section.subSections );
+
+    // Delete related subsesction
+    await SubSection.deleteMany({_id: {$in: allSubsectionIds }})
+
+    // Delete related sections
+    await Section.deleteMany({ _id: { $in: course.sections } })
+
+    // Delete related ratings and reviews
+    await RatingAndReview.deleteMany({ _id: { $in: course.ratingAndReviews } });
+
+    // Remove course from students' enrolled courses
+    await User.updateMany(
+      { _id: { $in: course.studentsEnrolled } },
+      { $pull: { courses: course._id } }
+    );
+
+    // Delete the course thumbnail from Cloudinary
+    // const publicId = course.thumbnail.split('/').pop()?.split('.')[0];
+    // if (publicId) {
+    //   await cloudinary.uploader.destroy(`course_thumbnails/${publicId}`);
+    // }
+
+    // Delete the course
+    await Course.findByIdAndDelete(courseId);
+
+    res.status(200).json({
+      success: true,
+      message: "Course and it's related data deleted successfully.",
+    });
+  }
+);
+
+// Course create ki 3 stage rakho first draft , ... and jab admin approve karega to hi publish state me jaega // Status
+
+export { getCourse, getAllCourses, createCourse, updateCourse, deleteCourse };
+
