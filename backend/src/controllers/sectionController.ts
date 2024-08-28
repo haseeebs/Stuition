@@ -7,14 +7,21 @@ import Section from "models/sectionModel";
 import SubSection from "models/subSectionModel";
 
 // Schemas
-import { createSectionSchema, updateSectionParamsSchema } from "schemas/sectionSchema";
+import { CreateSectionSchema, createSectionSchema, sectionParamsSchema, SectionParamsSchema, updateSectionParamsSchema } from "schemas/sectionSchema";
 
-const createSection =
-  async (req, res, next) => {
+// Utilities
+import ExpressError from "utils/ExpressError";
+import wrapAsync from "utils/wrapAsync";
+
+// Create a new section under a specific course
+// Route: POST /api/courses/:courseId/sections
+// Access: Private
+const createSection = wrapAsync(
+  async (req: Request<SectionParamsSchema, {}, CreateSectionSchema>, res: Response, next: NextFunction) => {
     
     // Validate request body and params
-    const { sectionName } = req.body;
-    const { courseId } = req.params;
+    const { sectionName } = createSectionSchema.parse(req.body);
+    const { courseId } = sectionParamsSchema.parse(req.params);
     
     // Create a new section
     const newSection = await Section.create({ sectionName });
@@ -23,15 +30,23 @@ const createSection =
       $push: { sections: newSection._id } // Add the new section's ID to the course's content array
     }, { new: true });
 
+    if (!result) {
+      return new ExpressError(404, "Course not found.")
+    }
+
     res.status(200).json({
       success: true,
       message: "Section created successfully",
       sectionId: newSection._id
     });
   }
+);
 
-const updateSection =
-  async (req, res, next) => {
+// Update an existing section under a specific course
+// Route: PUT /api/courses/:courseId/sections/:sectionId
+// Access: Private
+const updateSection = wrapAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
     
     // Validating the incoming parameters
     const { sectionId } = updateSectionParamsSchema.parse(req.params);
@@ -45,19 +60,31 @@ const updateSection =
       { new: true, runValidators: true }
     );
 
+    if (!updatedSection) {
+      return next(new ExpressError(404, "Section not found."));
+    }
+
     res.status(200).json({
       success: true,
       message: "Section updated successfully",
       section: updatedSection,
     });
   }
+);
 
-const deleteSection = 
+// Delete an existing section under a specific course
+// Route: DELETE /api/courses/:courseId/sections/:sectionId
+// Access: Private
+const deleteSection = wrapAsync(
   async (req: Request, res: Response, next: NextFunction) => {
 
     const { sectionId } = updateSectionParamsSchema.parse(req.params);
 
     const section = await Section.findById(sectionId);
+
+    if(!section) {
+      return next(new ExpressError(404, "Section not found"))
+    }
     
     // Delete all subsections that belong to this section
     await SubSection.deleteMany({_id: { $in: section.subSections }})
@@ -69,6 +96,10 @@ const deleteSection =
       { new: true }
     );
 
+    if (!course) {
+      return next(new ExpressError(404, "Course not found."));
+    }
+
     // Deleting the section
     await Section.findByIdAndDelete(sectionId);
 
@@ -77,5 +108,6 @@ const deleteSection =
       message: "Section and references deleted successfully",
     });
   }
+);
 
-export { createSection, deleteSection, updateSection };
+export { createSection, updateSection, deleteSection };

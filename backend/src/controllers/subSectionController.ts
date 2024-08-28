@@ -1,3 +1,6 @@
+// Node modules
+import { NextFunction, Request, Response } from "express";
+
 // Configuration
 import cloudinary from "config/cloudinaryConfig";
 
@@ -5,13 +8,28 @@ import cloudinary from "config/cloudinaryConfig";
 import Section from "models/sectionModel";
 import SubSection from "models/subSectionModel";
 
+// Schemas
+import { SubsectionSchemaType, subSectionSchema } from "schemas/subSectionSchema";
 
-const createSubSection =
-  async ( req, res, next ) => {
+// Utilities
+import ExpressError from "utils/ExpressError";
+import wrapAsync from "utils/wrapAsync";
+
+// Create a new subsection under a specific section
+// Route: POST /api/sections/:sectionId/subsections
+// Access: Private
+const createSubSection = wrapAsync(
+  async ( req: Request<{ sectionId: string }, {}, SubsectionSchemaType>, res: Response, next: NextFunction ) => {
     
     // Validate the body and params
-    const { title, description, timeDuration, additionalUrls } = req.body;
+    const validatedData = subSectionSchema.parse(req.body);
+    const { title, description, timeDuration, additionalUrls } = validatedData;
     const { sectionId } = req.params;
+
+    // Check if file is present
+    if (!req.file) {
+      return next(new ExpressError(400, "Video is required..."));
+    }
 
     let videoUrl;
 
@@ -26,7 +44,7 @@ const createSubSection =
 
       videoUrl = result.secure_url;
       } catch (error) {
-        console.error(error)
+        return next(new ExpressError(500, "Failed to upload video"));
       }
 
       // Create the new subsection
@@ -43,6 +61,10 @@ const createSubSection =
         $push: { subSection: newSubSection._id },
       });
 
+      if (!updatedSection) {
+        return next(new ExpressError(404, "Section not found"));
+      }
+
       return res.status(200).json({
         success: true,
         message: "Subsection created successfully",
@@ -51,15 +73,23 @@ const createSubSection =
     }
 );
 
-const updateSubSection =
-  async (req, res, next) => {
+// Update an existing subsection
+// Route: PATCH /api/subsections/:subsectionId
+// Access: Private
+const updateSubSection = wrapAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
 
-    const { title, description, timeDuration, additionalUrls } = req.body;
+    const validatedData = subSectionSchema.partial().parse(req.body);
 
+    const { title, description, timeDuration, additionalUrls } = validatedData;
     const { subsectionId } = req.params;
     
     // Check if the subsection exists
     const subsection = await SubSection.findById(subsectionId);
+    
+    if (!subsection) {
+      return next(new ExpressError(404, "Subsection not found."));
+    }
 
     let videoUrl;
 
@@ -74,8 +104,8 @@ const updateSubSection =
 
         videoUrl = result.secure_url;
       } catch (error) {
-        console.error(error);
-    }
+        return next(new ExpressError(500, "Failed to upload video"));
+      }
     }
 
     // Update subsection in the database
@@ -92,6 +122,10 @@ const updateSubSection =
       },
         { new: true }
       );
+      
+    if (!updatedSubSection) {
+      return next(new ExpressError(404, "Failed to update Subsection"));
+    }
 
     return res.status(200).json({
       success: true,
@@ -99,9 +133,13 @@ const updateSubSection =
       data: updatedSubSection,
     });
   }
+);
 
-const deleteSubSection =
-  async (req, res, next) => {
+// Delete an existing subsection
+// Route: DELETE /api/sections/:sectionId/subsections/:subsectionId
+// Access: Private
+const deleteSubSection = wrapAsync(
+  async (req: Request<{ sectionId: string; subsectionId: string }>, res: Response, next: NextFunction) => {
     const { sectionId, subsectionId } = req.params;
 
     // Update the section to remove the reference to the deleted subsection
@@ -111,8 +149,16 @@ const deleteSubSection =
       { new: true }
     );
 
+    if (!updatedSection) {
+      return next(new ExpressError(404, "Section not found"));
+    }
+
     // Find and delete the subsection
     const deletedSubSection = await SubSection.findByIdAndDelete(subsectionId);
+
+    if (!deletedSubSection) {
+      return next(new ExpressError(404, "Subsection not found"));
+    }
 
     return res.status(200).json({
       success: true,
@@ -120,5 +166,6 @@ const deleteSubSection =
       data: deletedSubSection,
     });
   }
+);
 
 export { createSubSection , updateSubSection, deleteSubSection };

@@ -2,6 +2,9 @@
 import multer from "multer";
 import path from "path";
 
+// Utilities
+import ExpressError from "utils/ExpressError";
+
 const __dirname = import.meta.dirname; // Get the directory name
 
 const storage = multer.diskStorage({
@@ -25,7 +28,7 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
   if (extname && mimetype) {
     return cb(null, true);
   } else {
-    cb(new Error("Only images and videos are allowed"));
+    cb(new ExpressError(400, "Only images and videos are allowed"));
   }
 };
 
