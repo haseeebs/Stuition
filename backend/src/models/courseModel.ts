@@ -1,4 +1,5 @@
 import { model, Schema, Document } from "mongoose";
+import RatingAndReview from "./ratingAndReviewModel";
 
 // Course interface
 export interface ICourse extends Document {
@@ -16,6 +17,7 @@ export interface ICourse extends Document {
   tags: string[];
   instructions: string[];
   status: "draft" | "published";
+  calculateAvgRating: () => Promise<number>;
 }
 
 // Course schema
@@ -35,6 +37,16 @@ const courseSchema = new Schema<ICourse>({
   instructions: [{ type: String }],
   status: { type: String, enum: ["draft", "published"] }
 }, { timestamps: true });
+
+courseSchema.methods.calculateAvgRating = async function () {
+  const ratings = await RatingAndReview.find({course: this._id});
+  
+  this.avgRating = ratings.length > 0 
+  ? ratings.reduce((total, rating) => total + rating.rating, 0) / ratings.length 
+  : 0;
+  
+  return this.avgRating;
+}
 
 const Course = model<ICourse>("Course", courseSchema);
 

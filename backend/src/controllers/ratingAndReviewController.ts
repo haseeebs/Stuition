@@ -1,8 +1,15 @@
+// Node modules
+import { Schema } from "mongoose";
 import { NextFunction, Request, Response } from "express";
+
+// models
 import Course from "models/courseModel";
 import RatingAndReview from "models/ratingAndReviewModel";
-import { Schema } from "mongoose";
+
+// Schemas
 import { ratingAndReviewSchema, RatingAndReviewSchemaType } from "schemas/ratingAndReviewSchema";
+
+// Utilities
 import ExpressError from "utils/ExpressError";
 import wrapAsync from "utils/wrapAsync";
 
