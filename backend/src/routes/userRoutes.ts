@@ -1,8 +1,10 @@
 // Node modules
 import { Router } from "express";
+import { isStudent, protect } from "middleware/authMiddleware";
 
 // Controllers
-import { login, logout, register } from "controllers/userController";
+import { resetPassword, resetPasswordToken } from "controllers/resetPasswordController";
+import { changePassword, deleteUser, login, logout, register, sendOtp } from "controllers/userController";
 
 const router = Router();
 
@@ -14,5 +16,20 @@ router.post("/login", login);
 
 // User logout
 router.post("/logout", logout);
+
+// Change password (protected route)
+router.post("/change-password", protect, changePassword);
+
+// Request password reset token
+router.post("/reset-password", resetPasswordToken);
+
+// Reset password using token
+router.post("/reset-password/:token", resetPassword);
+
+// Send OTP for new account verification
+router.post("/verify-otp", sendOtp);
+
+// Delete user (protected route for students)
+router.delete("/users/:id", protect, isStudent, deleteUser);
 
 export default router;
