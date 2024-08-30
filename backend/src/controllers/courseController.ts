@@ -20,7 +20,9 @@ import wrapAsync from "utils/wrapAsync";
 import UserActivity from "models/userActivity";
 
 
-// Get course by ID
+// Fetch a single course by ID
+// Route: GET /api/v1/courses/:id
+// Access: Public (Anyone can access course details)
 const getCourse = wrapAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { courseId } = req.params;
@@ -79,6 +81,9 @@ const getCourse = wrapAsync(
   }
 );
 
+// Fetch all courses
+// Route: GET /api/v1/courses
+// Access: Public (Anyone can access the list of courses)
 const getAllCourses = wrapAsync(async (req: Request, res: Response) => {
   const courses = await Course.find()
     .populate({
@@ -108,7 +113,7 @@ const getAllCourses = wrapAsync(async (req: Request, res: Response) => {
 });
 
 // Create a new course
-// Route: POST /api/courses
+// Route: POST /api/v1/courses
 // Access: Private (Only instructors can create courses)
 const createCourse = wrapAsync(
   async (req: Request<{}, {}, CourseType>, res: Response, next: NextFunction) => {
@@ -154,6 +159,9 @@ const createCourse = wrapAsync(
   }
 );
 
+// Update a course by ID
+// Route: PUT /api/v1/courses/:id
+// Access: Private (Only Instructor and Admin can update courses)
 const updateCourse = wrapAsync( 
   async (req: Request<{ courseId: string },{},CourseType>, res: Response, next: NextFunction) => {
 
@@ -215,7 +223,7 @@ const updateCourse = wrapAsync(
 );
 
 // Delete a course
-// Route: DELETE /api/courses/:id
+// Route: DELETE /api/v1/courses/:id
 // Access: Private (Only instructors can delete courses)
 const deleteCourse = wrapAsync(
   async (req: Request<{ courseId: string }>, res: Response, next: NextFunction) => {

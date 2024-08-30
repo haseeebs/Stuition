@@ -22,7 +22,7 @@ import wrapAsync from "utils/wrapAsync";
 
 
 // Send otp for new account verification
-// Route: POST /api/auth/verify-otp
+// Route: POST /api/v1/auth/verify-otp
 // Access Public
 const sendOtp = wrapAsync(async (req: Request, res: Response, next: NextFunction) => {
   const { email } = req.body;
@@ -58,12 +58,12 @@ const sendOtp = wrapAsync(async (req: Request, res: Response, next: NextFunction
 
 
 // Register new user
-// Route: POST /api/auth/register
+// Route: POST /api/v1/auth/register
 // Access: Public
 const register = wrapAsync(async (req: Request<{}, {}, z.infer<typeof userSchema>>, res: Response, next: NextFunction) => {
   const validatedData = userSchema.parse(req.body);
 
-  const { firstName, lastName, email, password, accountType, contactNumber, otp: enteredOtp } = validatedData;
+  const { firstName, lastName, email, password, accountType, otp: enteredOtp } = validatedData;
 
   // Check if user already exists
   const existUser = await User.findOne({ email });
@@ -84,7 +84,7 @@ const register = wrapAsync(async (req: Request<{}, {}, z.infer<typeof userSchema
     about: null,
     dateOfBirth: null,
     gender: null,
-    contactNumber: contactNumber,
+    contactNumber: null,
   });
 
   // Create user
@@ -94,7 +94,6 @@ const register = wrapAsync(async (req: Request<{}, {}, z.infer<typeof userSchema
     email,
     password,
     accountType,
-    contactNumber,
     profile: profile._id,
     image: `https://api.dicebear.com/5.x/initials/svg?seed=${firstName} ${lastName}`,
   });
@@ -112,7 +111,7 @@ const register = wrapAsync(async (req: Request<{}, {}, z.infer<typeof userSchema
 
 
 // Auth user
-// Route: POST /api/auth/login
+// Route: POST /api/v1/auth/login
 // Access Public
 const login = wrapAsync(async (req: Request<{}, {}, z.infer<typeof loginSchema>>, res: Response, next: NextFunction) => {
   const validatedData = loginSchema.parse(req.body);
@@ -156,7 +155,7 @@ const login = wrapAsync(async (req: Request<{}, {}, z.infer<typeof loginSchema>>
 
 
 // Logout user
-// Route: POST /api/auth/logout
+// Route: POST /api/v1/auth/logout
 // Access Private
 const logout = wrapAsync(async (req: Request, res: Response) => {
   res.cookie('jwtToken', '', {
@@ -172,7 +171,7 @@ const logout = wrapAsync(async (req: Request, res: Response) => {
 
 
 // Update user
-// Route: POST /api/auth/change-password
+// Route: POST /api/v1/auth/change-password
 // Access: Private
 const changePassword = wrapAsync(async (req: Request<{}, {}, z.infer<typeof changePasswordSchema>>, res: Response, next: NextFunction) => {
 
@@ -217,7 +216,7 @@ const changePassword = wrapAsync(async (req: Request<{}, {}, z.infer<typeof chan
 });
 
 // Delete user
-// Route: DELETE /api/users/:id
+// Route: DELETE /api/v1/users/:id
 // Access: Private
 const deleteUser = wrapAsync(
   async (req: Request, res: Response, next: NextFunction) => {

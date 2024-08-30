@@ -13,6 +13,10 @@ import { categorySchema, CategorySchemaType } from "schemas/categorySchema";
 import ExpressError from "utils/ExpressError";
 import wrapAsync from "utils/wrapAsync";
 
+
+// Create a new category
+// Route: POST /api/v1/categories
+// Access: Private (Only Admin can create categories)
 const createCategory = wrapAsync(
   async ( req: Request<{}, {}, CategorySchemaType>, res: Response, next: NextFunction ) => {
     
@@ -34,6 +38,10 @@ const createCategory = wrapAsync(
   }
 );
 
+
+// Fetch category page details
+// Route: GET /api/v1/categories
+// Access: Private
 const categoryPageDetails = wrapAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.user?._id;

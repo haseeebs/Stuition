@@ -7,8 +7,7 @@ export const userSchema = z.object({
     email: z.string().email({ message: 'Invalid email format' }),
     password: z.string().min(6, { message: 'Password must be at least 6 characters long' }),
     confirmPassword: z.string().min(6, { message: 'Password must be at least 6 characters long' }),
-    accountType: z.string().min(1, { message: 'Account type is required' }),
-    contactNumber: z.string().min(1, { message: 'Contact number is required' }),
+    accountType: z.enum(["instructor", "student"], { message: 'Account type must be either "instructor" or "student"' }),
     otp: z.string().min(1, { message: 'OTP is required' }),
 }).refine(data => data.password === data.confirmPassword, {
     message: "Password and confirm password do not match",

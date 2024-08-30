@@ -11,7 +11,9 @@ import { profileSchema, ProfileSchemaType } from "schemas/profileSchema";
 import ExpressError from "utils/ExpressError";
 import wrapAsync from "utils/wrapAsync";
 
-
+// Update user profile by ID
+// Route: PUT /api/v1/users/:id/profile
+// Access: Private (Only the user or authorized personnel can update the profile)
 const updateProfile = wrapAsync(
   async (req: Request<{}, {}, ProfileSchemaType>, res: Response, next: NextFunction) => {
     const { about, contactNumber, dateOfBirth, gender } = profileSchema.parse(req.body);

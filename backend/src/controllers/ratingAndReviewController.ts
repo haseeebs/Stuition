@@ -13,6 +13,10 @@ import { ratingAndReviewSchema, RatingAndReviewSchemaType } from "schemas/rating
 import ExpressError from "utils/ExpressError";
 import wrapAsync from "utils/wrapAsync";
 
+
+// Create a new rating
+// Route: POST /api/v1/ratings
+// Access: Private (Only authenticated users can create ratings)
 const createRating = wrapAsync(
   async (req: Request<{ courseId: string }, {}, RatingAndReviewSchemaType>, res: Response, next: NextFunction) => {
 
@@ -64,6 +68,10 @@ const createRating = wrapAsync(
     })
 });
 
+
+// Fetch all reviews for a course
+// Route: GET /api/v1/courses/:courseId/reviews
+// Access: Public (Anyone can access the list of reviews for a course)
 const getReviews = wrapAsync(
     async (req: Request, res: Response, next: NextFunction) => {
         
