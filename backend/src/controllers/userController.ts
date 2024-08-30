@@ -1,9 +1,8 @@
 // Node modules
 import { NextFunction, Request, Response } from "express";
-import jwt from 'jsonwebtoken';
 import z from "zod";
 import otpGenerator from "otp-generator";
-import { Schema } from "mongoose";
+import { ObjectId, Schema } from "mongoose";
 
 // Internal models
 import OTP from "models/otpModel";
@@ -19,6 +18,7 @@ import { changePasswordSchema, loginSchema, userSchema } from "../schemas/userSc
 import ExpressError from "utils/ExpressError";
 import mailSender from "utils/mailSender";
 import wrapAsync from "utils/wrapAsync";
+import generateToken from "utils/generateToken";
 
 
 // Send otp for new account verification
@@ -60,54 +60,58 @@ const sendOtp = wrapAsync(async (req: Request, res: Response, next: NextFunction
 // Register new user
 // Route: POST /api/v1/auth/register
 // Access: Public
-const register = wrapAsync(async (req: Request<{}, {}, z.infer<typeof userSchema>>, res: Response, next: NextFunction) => {
-  const validatedData = userSchema.parse(req.body);
+const register = wrapAsync(
+  async (req: Request<{}, {}, z.infer<typeof userSchema>>, res: Response, next: NextFunction) => {
+    const validatedData = userSchema.parse(req.body);
 
-  const { firstName, lastName, email, password, accountType, otp: enteredOtp } = validatedData;
+    const { firstName, lastName, email, password, accountType, otp: enteredOtp } = validatedData;
 
-  // Check if user already exists
-  const existUser = await User.findOne({ email });
+    // Check if user already exists
+    const existUser = await User.findOne({ email });
 
-  if (existUser) {
-    return next(new ExpressError(400, 'User with this email already exists'));
-  }
+    if (existUser) {
+      return next(new ExpressError(400, 'User with this email already exists'));
+    }
 
-  const latestOTP = await OTP.findOne({ email }).sort({ createdAt: -1 });
+    const latestOTP = await OTP.findOne({ email }).sort({ createdAt: -1 });
 
-  if (!latestOTP || !(await latestOTP.verifyOtp(enteredOtp))) {
-    return next(new ExpressError(400, "Invalid or expired OTP"));
-  }
+    if (!latestOTP || !(await latestOTP.verifyOtp(enteredOtp))) {
+      return next(new ExpressError(400, "Invalid or expired OTP"));
+    }
 
-  // Create profile
-  const profile = await Profile.create({
-    user: null,
-    about: null,
-    dateOfBirth: null,
-    gender: null,
-    contactNumber: null,
+    // Create profile
+    const profile = await Profile.create({
+      user: null,
+      about: null,
+      dateOfBirth: null,
+      gender: null,
+      contactNumber: null,
+    });
+
+    // Create user
+    const newUser = await User.create({
+      firstName,
+      lastName,
+      email,
+      password,
+      accountType,
+      profile: profile._id,
+      image: `https://api.dicebear.com/5.x/initials/svg?seed=${firstName} ${lastName}`,
+    });
+
+    // Update profile with user reference
+    profile.user = newUser._id as Schema.Types.ObjectId;
+    await profile.save();
+
+    // Generate token
+    generateToken(res, newUser._id as ObjectId);
+
+    return res.status(200).json({
+      success: true,
+      message: "User registered successfully",
+      newUser
+    });
   });
-
-  // Create user
-  const newUser = await User.create({
-    firstName,
-    lastName,
-    email,
-    password,
-    accountType,
-    profile: profile._id,
-    image: `https://api.dicebear.com/5.x/initials/svg?seed=${firstName} ${lastName}`,
-  });
-
-  // Update profile with user reference
-  profile.user = newUser._id as Schema.Types.ObjectId;
-  await profile.save();
-
-  return res.status(200).json({
-    success: true,
-    message: "User registered successfully",
-    newUser,
-  });
-});
 
 
 // Auth user
@@ -130,16 +134,7 @@ const login = wrapAsync(async (req: Request<{}, {}, z.infer<typeof loginSchema>>
     return next(new ExpressError(400, 'Incorrect password'));
   }
 
-  if (!process.env.JWT_SECRET_KEY) throw new Error('JWT_SECRET_KEY is not defined in the environment variables')
-
-  const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: '30d' });
-
-  res.cookie('jwtToken', token, {
-    httpOnly: true,
-    sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 Days
-  })
+  generateToken(res, user._id as ObjectId);
 
   return res.status(200).json({
     success: true,
