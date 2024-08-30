@@ -5,7 +5,12 @@ const connectDb = async () => {
     const connection = await connect(`${process.env.MONGO_URL}`);
     console.log(`Connected to database: ${connection.connection.host}`);
   } catch (error) {
-    console.log(`{Error during MongoDB connection: ${error}`);
+    if (error instanceof Error) {
+      console.log(`{Error during MongoDB connection: ${error.message}`);
+    } else {
+      console.log(`{Unknown error during MongoDB connection: ${error}`);
+    }
+    process.exit(1);
   }
 };
 
