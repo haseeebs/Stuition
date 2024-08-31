@@ -62,7 +62,7 @@ const categoryPageDetails = wrapAsync(
     const coursesWithCategories = await Course.find({ _id: { $in: viewedCourseIds } }).populate('category');
 
     // Extract unique category IDs
-    const categoryIds = [...new Set(coursesWithCategories.map(course => course.category._id))];
+    const categoryIds = [...new Set(coursesWithCategories.map(course => course.category))];
 
     // Fetch courses in the same categories
     const recommendedCourses = await Course.find({ category: { $in: categoryIds } }).populate('category');

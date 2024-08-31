@@ -8,9 +8,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
+    "build": "tsc",
     "importData": "node dist/seed/seeder.js",
-    "destroyData": "node dist/seed/seeder.js -d",
-    "build": "tsc"
+    "destroyData": "node dist/seed/seeder.js -d"
   },
   "repository": {
     "type": "git",

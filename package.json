@@ -1,0 +1,29 @@
+{
+  "name": "stuition-fullstack",
+  "version": "1.0.0",
+  "description": "It's a Fullstack EdTech platform.",
+  "type": "module",
+  "main": "backend/src/server.ts",
+  "private": true,
+  "scripts": {
+    "start": "npm run start:backend",
+    "start:frontend": "npm start --prefix frontend",
+    "start:backend": "npm start --prefix backend",
+
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "dev-color": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"bgBlue.bold,bgMagenta.bold\" \"npm run server\" \"npm run client\"",
+    "client": "npm run start --prefix frontend",
+    "server": "npm run dev --prefix backend",
+    
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+
+    "importData": "npm run importData --prefix backend",
+    "destroyData": "npm run destroyData --prefix backend"
+  },
+  "author": "Haseeb",
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  }
+}
