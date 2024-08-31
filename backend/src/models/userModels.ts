@@ -8,6 +8,7 @@ export interface IUser extends Document {
   lastName: string;
   email: string;
   password: string;
+  isAdmin: boolean;
   accountType: "instructor" | "student";
   profile: Schema.Types.ObjectId;
   courses: Schema.Types.ObjectId[];
@@ -25,6 +26,7 @@ const userSchema = new Schema<IUser>({
   lastName: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, trim: true },
   password: { type: String, required: true },
+  isAdmin: { type: Boolean, required: true, default: false },
   accountType: { type: String, required: true, enum: [ "instructor", "student" ] },
   profile: { type: Schema.Types.ObjectId, ref: "Profile"},
   courses: [{ type: Schema.Types.ObjectId, ref: "Course" }],

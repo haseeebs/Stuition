@@ -55,8 +55,8 @@ const isStudent = (req: Request, res: Response, next: NextFunction) => {
 
 
 const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-    const isAdmin = req.user?.accountType === 'admin'
-    if(isAdmin) {
+    const isAdmin = req.user?.isAdmin
+    if(req.user && isAdmin) {
         next()
     } else {
         next(new ExpressError(401, 'Not authorized, as Admin'))

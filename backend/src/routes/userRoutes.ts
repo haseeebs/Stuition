@@ -1,6 +1,6 @@
 // Node modules
 import { Router } from "express";
-import { isStudent, protect } from "middleware/authMiddleware";
+import { isAdmin, protect } from "middleware/authMiddleware";
 
 // Controllers
 import { resetPassword, resetPasswordToken } from "controllers/resetPasswordController";
@@ -29,7 +29,7 @@ router.post("/reset-password/:token", resetPassword);
 // Send OTP for new account verification
 router.post("/verify-otp", sendOtp);
 
-// Delete user (protected route for students)
-router.delete("/users/:id", protect, isStudent, deleteUser);
+// Delete user (protected route for admin)
+router.delete("/users/:id", protect, isAdmin, deleteUser);
 
 export default router;
