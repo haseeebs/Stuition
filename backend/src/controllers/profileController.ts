@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express";
 
 // Internal Models
 import Profile from "models/profileModel";
+import User from "models/userModels";
 
 // Schemas
 import { profileSchema, ProfileSchemaType } from "schemas/profileSchema";
@@ -12,34 +13,56 @@ import ExpressError from "utils/ExpressError";
 import wrapAsync from "utils/wrapAsync";
 
 // Update user profile by ID
-// Route: PUT /api/v1/users/:id/profile
+// Route: PUT /api/v1/profile/updateProfilePicture
 // Access: Private (Only the user or authorized personnel can update the profile)
 const updateProfile = wrapAsync(
-  async (req: Request<{}, {}, ProfileSchemaType>, res: Response, next: NextFunction) => {
-    const { about, contactNumber, dateOfBirth, gender } = profileSchema.parse(req.body);
-  
-    const profileId = req.user?.profile;
+    async (req: Request<{}, {}, ProfileSchemaType>, res: Response, next: NextFunction) => {
+        const { about, contactNumber, dateOfBirth, gender } = profileSchema.parse(req.body);
 
-    const updatedProfile = await Profile.findByIdAndUpdate(profileId, {
-        about,
-        contactNumber,
-        dateOfBirth,
-        gender
-    }, { new: true, runValidators: true })
+        const profileId = req.user?.profile;
 
-    if(!updatedProfile) {
-        return next(new ExpressError(404, "User's Profile not found"));
-    };
+        const updatedProfile = await Profile.findByIdAndUpdate(profileId, {
+            about,
+            contactNumber,
+            dateOfBirth,
+            gender
+        }, { new: true, runValidators: true })
 
-    return res.status(200).json({
-        success: true,
-        message: "User profile updated successfully",
-        profile: updatedProfile
+        if (!updatedProfile) {
+            return next(new ExpressError(404, "User's Profile not found"));
+        };
+
+        return res.status(200).json({
+            success: true,
+            message: "User profile updated successfully",
+            profile: updatedProfile
+        });
     });
-});
 
-// Profile picture update
+// Update user profile picture
+// Route: PUT /api/v1/profile/updateProfilePicture
+// Access: Private (Only the user or authorized personnel can update the profile picture)
+const updateProfilePicture = wrapAsync(
+    async (req: Request, res: Response, next: NextFunction) => {
+        const userId = req.user?._id;
+        const profilePicture = req.file?.path;
+
+        const updatedUser = await User.findByIdAndUpdate(userId, {
+            image: profilePicture
+        }, { new: true });
+
+        if (!updatedUser) {
+            return next(new ExpressError(404, "User not found."))
+        };
+
+        return res.status(200).json({
+            success: true,
+            message: "User profile picture updated successfully",
+            updatedUser
+        })
+    }
+);
 
 // Get iser details
 
-export { updateProfile };
+export { updateProfile, updateProfilePicture };
